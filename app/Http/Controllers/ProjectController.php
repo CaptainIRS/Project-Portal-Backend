@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AddProjectRequest;
+use App\Http\Requests\EditProjectRequest;
 use Illuminate\Http\Request;
 use App\Models\Project;
 use App\Models\User;
@@ -73,27 +75,13 @@ class ProjectController extends Controller
     /**
      * Store new project.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\AddProjectRequest $request
      * @return \Illuminate\Http\Response
      */
-    public function add(Request $request)
+    public function add(AddProjectRequest $request)
     {
         $user = $request->user();
-        $data = $request->validate([
-            'name' => 'required|max:255',
-            'description' => 'required',
-            'deadline' => 'nullable|date|date_format:Y-m-d H:i:s|after_or_equal:today',
-            'max_member_count' => 'required|integer',
-            'repo_link' => 'required|unique:projects,repo_link|url',
-            'review' => 'nullable',
-            'status' => 'required|exists:statuses,id',
-            'type' => 'required|exists:types,id',
-            'users' => 'nullable|array',
-            'users.*.id' => 'required|exists:users,id',
-            'users.*.role' => 'required|in:AUTHOR,MAINTAINER,DEVELOPER',
-            'stacks' => 'required|array|min:1',
-            'stacks.*' => 'exists:stacks,id'
-        ]);
+        $data = $request->validated();
 
         $project = new Project;
         $project->name = $data['name'];
@@ -145,11 +133,11 @@ class ProjectController extends Controller
     /**
      * Edit the specified project in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\EditProjectRequest  $request
      * @param  int  $projectId
      * @return \Illuminate\Http\Response
      */
-    public function edit(Request $request, $projectId)
+    public function edit(EditProjectRequest $request, $projectId)
     {
         $user = $request->user();
         try {
@@ -171,21 +159,7 @@ class ProjectController extends Controller
             ], 403);
         }
 
-        $data = $request->validate([
-            'name' => 'required|max:255',
-            'description' => 'required|max:5000',
-            'deadline' => 'nullable|date|date_format:Y-m-d H:i:s|after_or_equal:today',
-            'max_member_count' => 'required|integer|min:1|max:100',
-            'repo_link' => 'required|unique:projects,repo_link,' . $projectId,
-            'review' => 'nullable|max:1000',
-            'status' => 'required|exists:statuses,id',
-            'type' => 'required|exists:types,id',
-            'users' => 'nullable|array',
-            'users.*.id' => 'required|exists:users,id',
-            'users.*.role' => 'required|in:MAINTAINER,DEVELOPER',
-            'stacks' => 'required|array|min:1',
-            'stacks.*' => 'exists:stacks,id'
-        ]);
+        $data = $request->validated();
 
         if (isset($data['users'])) {
             if (count($data['users']) + $project->users()->wherePivot('role', 'AUTHOR')->count() > $data['max_member_count']) {

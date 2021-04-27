@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AddFeedbackRequest;
+use App\Http\Requests\AddReviewRequest;
+use App\Http\Requests\EditFeedbackRequest;
 use App\Models\Project;
 use App\Models\Feedback;
 use App\Models\User;
@@ -52,11 +55,11 @@ class FeedbackController extends Controller
     /**
      * Add feedback
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\AddFeedbackRequest  $request
      * @param  int  $projectId
      * @return \Illuminate\Http\Response
      */
-    public function add(Request $request, $projectId)
+    public function add(AddFeedbackRequest $request, $projectId)
     {
         try {
             $project = Project::findOrFail($projectId);
@@ -65,10 +68,7 @@ class FeedbackController extends Controller
                 'message' => 'Project doesn\'t exist!'
             ], 404);
         }
-        $request->validate([
-            'receiver_id' => 'required|exists:users,id',
-            'content' => 'required|max:1000'
-        ]);
+        $request->validated();
 
         $senderId = $request->user()->id;
         $receiverId = $request->receiver_id;
@@ -117,15 +117,12 @@ class FeedbackController extends Controller
     /**
      * Edit existing feedback
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\EditFeedbackRequest  $request
      * @return \Illuminate\Http\Response
      */
-    public function edit(Request $request)
+    public function edit(EditFeedbackRequest $request)
     {
-        $request->validate([
-            'feedback_id' => 'required|integer|exists:feedbacks,id',
-            'content' => 'required|max:1000'
-        ]);
+        $request->validated();
 
         try {
             $feedback = Feedback::find($request->feedback_id);
@@ -161,15 +158,13 @@ class FeedbackController extends Controller
     /**
      * Add review
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\AddReviewRequest  $request
      * @param  int  $projectId
      * @return \Illuminate\Http\Response
      */
-    public function review(Request $request, $projectId)
+    public function review(AddReviewRequest $request, $projectId)
     {
-        $request->validate([
-            'review' => 'required|max:1000'
-        ]);
+        $request->validated();
 
         try {
             $project = Project::findOrFail($projectId);

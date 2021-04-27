@@ -74,6 +74,16 @@ class EditProjectsTest extends TestCase
     }
 
     /** @test */
+    public function project_cannot_be_edited_with_invalid_fields()
+    {
+        Passport::actingAs($this->maintainer);
+        $this->post(
+            'api/projects/1/edit',
+            []
+        )->assertStatus(422);
+    }
+
+    /** @test */
     public function authors_and_maintainers_can_edit_their_project()
     {
         $data = $this->project->toArray();

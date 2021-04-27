@@ -52,6 +52,16 @@ class AddProjectsTest extends TestCase
     }
 
     /** @test */
+    public function projects_cannot_be_added_with_invalid_fields()
+    {
+        Passport::actingAs($this->users[0]);
+        $this->post(
+            'api/projects/add',
+            []
+        )->assertStatus(422);
+    }
+
+    /** @test */
     public function user_who_added_the_project_becomes_author()
     {
         Passport::actingAs($this->users[0]);

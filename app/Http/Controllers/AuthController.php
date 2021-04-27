@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ForgotPasswordRequest;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\ResetPasswordRequest;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
@@ -13,7 +17,7 @@ use Illuminate\Support\Facades\Password;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
+    public function register(RegisterRequest $request)
     {
         if (env('REGISTRATION_ENABLED') === false) {
             return response()->json([
@@ -21,13 +25,7 @@ class AuthController extends Controller
             ], 400);
         }
 
-        $data = $request->validate([
-            'name' => 'required|max:255',
-            'email' => 'email|required|unique:users,email',
-            'password' => 'required|confirmed',
-            'roll_number' => 'required|integer|digits:9|unique:users,roll_number',
-            'github_handle' => 'required|max:255'
-        ]);
+        $data = $request->validated();
 
         $user = new User;
         $user->name = $data['name'];
@@ -51,13 +49,10 @@ class AuthController extends Controller
         }
     }
 
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
 
-        $loginData = $request->validate([
-            'roll_number' => 'required|integer',
-            'password' => 'required'
-        ]);
+        $loginData = $request->validated();
 
         if (!auth()->attempt($loginData)) {
             return response()->json(['message' => 'Invalid Credentials'], 401);
@@ -68,12 +63,9 @@ class AuthController extends Controller
         return response(['message' => 'Login Successful', 'user' => auth()->user(), 'access_token' => $accessToken]);
     }
 
-    public function forgot_password(Request $request)
+    public function forgot_password(ForgotPasswordRequest $request)
     {
-        $request->validate([
-            'roll_number' => 'required|integer',
-            'email' => 'required|email'
-        ]);
+        $request->validated();
         
         $user = User::where('roll_number', $request->roll_number)->first();
         if ($user && $user->email === $request->email) {
@@ -115,13 +107,9 @@ class AuthController extends Controller
         }
     }
 
-    public function reset_password(Request $request)
+    public function reset_password(ResetPasswordRequest $request)
     {
-        $request->validate([
-            'token' => 'required',
-            'email' => 'required|email',
-            'password' => 'required|confirmed',
-        ]);
+        $request->validated();
     
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),

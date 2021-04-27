@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AddStackRequest;
 use Illuminate\Http\Request;
 use App\Models\Stack;
 
@@ -25,14 +26,12 @@ class StackController extends Controller
     /**
      * Adds new stack to the database
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\AddStackRequest  $request
      * @return \Illuminate\Http\Response
      */
-    public function add(Request $request)
+    public function add(AddStackRequest $request)
     {
-        $data = $request->validate([
-            'name' => 'required|max:255|unique:stacks,name'
-        ]);
+        $data = $request->validated();
         $stack = new Stack;
         $stack->name = $data['name'];
 
