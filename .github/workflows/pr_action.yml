@@ -1,7 +1,9 @@
-name: test
+name: test-and-coverage
 
 on: 
   push:
+    branches:
+    - coverage
   pull_request:
     branches:
     - master
@@ -26,3 +28,13 @@ jobs:
         uses: "docker://php:latest"
         with:
           args: "php artisan test"
+      - name: Coverage
+        uses: "docker://php:latest"
+        with:
+          args: "php ./vendor/bin/phpunit --coverage-clover coverage.xml"
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          verbose: true
