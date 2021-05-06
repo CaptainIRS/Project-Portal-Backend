@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AddStackRequest;
 use Illuminate\Http\Request;
 use App\Models\Stack;
+use Illuminate\Support\Facades\DB;
 
 class StackController extends Controller
 {
@@ -31,22 +32,15 @@ class StackController extends Controller
      */
     public function add(AddStackRequest $request)
     {
-        $data = $request->validated();
-        $stack = new Stack;
-        $stack->name = $data['name'];
+        $stack = new Stack($request->only(['name']));
 
-        \DB::transaction(function () use ($stack) {
+        DB::transaction(function () use ($stack) {
             $stack->save();
         });
 
-        if ($stack->exists) {
-            return response()->json([
-                'message' => 'Stack added successfully!'
-            ], 200);
-        } else {
-            return response()->json([
-                'message' => 'Stack could not be created!'
-            ], 503);
-        }
+        assert($stack->exists);
+        return response()->json([
+            'message' => 'Stack added successfully!'
+        ], 200);
     }
 }

@@ -21,14 +21,14 @@ class AddStackTest extends TestCase
     }
 
     /** @test */
-    public function add_project_route_is_guarded()
+    public function add_stack_route_is_guarded()
     {
         $this->post('api/stacks/add')
             ->assertStatus(401);
     }
 
     /** @test */
-    public function projects_can_be_added()
+    public function stacks_can_be_added()
     {
         Passport::actingAs($this->user);
         $this->post(

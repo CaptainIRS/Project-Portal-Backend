@@ -5,33 +5,11 @@ namespace App\Policies;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Auth\Access\Response;
 
 class ProjectPolicy
 {
     use HandlesAuthorization;
-
-    /**
-     * Determine whether the user can view any models.
-     *
-     * @param  \App\Models\User  $user
-     * @return mixed
-     */
-    public function viewAny(User $user)
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can view the model.
-     *
-     * @param  \App\Models\User  $user
-     * @param  \App\Models\Project  $project
-     * @return mixed
-     */
-    public function view(User $user, Project $project)
-    {
-        //
-    }
 
     /**
      * Determine whether the user can create models.
@@ -41,7 +19,7 @@ class ProjectPolicy
      */
     public function create(User $user)
     {
-        //
+        return Response::allow();
     }
 
     /**
@@ -53,7 +31,16 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project)
     {
-        //
+        if ($project->users()
+            ->where(function ($query) {
+                $query->where('project_user.role', 'AUTHOR')
+                    ->orWhere('project_user.role', 'MAINTAINER');
+            })->get()
+            ->contains($user->id)) {
+            return Response::allow();
+        } else {
+            return Response::deny();
+        }
     }
 
     /**
@@ -65,30 +52,13 @@ class ProjectPolicy
      */
     public function delete(User $user, Project $project)
     {
-        //
-    }
-
-    /**
-     * Determine whether the user can restore the model.
-     *
-     * @param  \App\Models\User  $user
-     * @param  \App\Models\Project  $project
-     * @return mixed
-     */
-    public function restore(User $user, Project $project)
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     *
-     * @param  \App\Models\User  $user
-     * @param  \App\Models\Project  $project
-     * @return mixed
-     */
-    public function forceDelete(User $user, Project $project)
-    {
-        //
+        if ($project->users()
+            ->wherePivot('role', 'AUTHOR')
+            ->get()
+            ->contains($user->id)) {
+            return Response::allow();
+        } else {
+            return Response::deny('You are not allowed to delete this project!');
+        }
     }
 }

@@ -8,7 +8,7 @@ use App\Models\Type;
 
 class FilterController extends Controller
 {
-    public function userFilter($user_id)
+    public function user_filter($user_id)
     {
         $filter = User::where('id', $user_id)->with(
          'projects.stacks',
@@ -23,7 +23,7 @@ class FilterController extends Controller
         ], 200);
     }
 
-    public function stackFilter($stack_id)
+    public function stack_filter($stack_id)
     {
         $filter = Stack::where('id', $stack_id)->with(
          'projects.stacks',
@@ -38,7 +38,7 @@ class FilterController extends Controller
         ], 200);
     }
 
-    public function typeFilter($type_id)
+    public function type_filter($type_id)
     {
         $filter = Type::where('id', $type_id)->with(
          'projects.stacks',

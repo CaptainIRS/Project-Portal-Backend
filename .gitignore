@@ -8,6 +8,7 @@
 .env
 .env.backup
 .phpunit.result.cache
+coverage.xml
 Homestead.json
 Homestead.yaml
 npm-debug.log

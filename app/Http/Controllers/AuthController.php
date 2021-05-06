@@ -34,19 +34,14 @@ class AuthController extends Controller
         $user->roll_number = $data['roll_number'];
         $user->github_handle = $data['github_handle'];
 
-        \DB::transaction(function () use ($user) {
+        DB::transaction(function () use ($user) {
             $user->save();
         });
 
-        if ($user->exists) {
-            return response()->json([
-                'message' => 'Registration Successful'
-            ], 200);
-        } else {
-            return response()->json([
-                'message' => 'User could not be created'
-            ], 503);
-        }
+        assert($user->exists);
+        return response()->json([
+            'message' => 'Registration Successful'
+        ], 200);
     }
 
     public function login(LoginRequest $request)
@@ -60,7 +55,11 @@ class AuthController extends Controller
 
         $accessToken = auth()->user()->createToken('authToken')->accessToken;
 
-        return response(['message' => 'Login Successful', 'user' => auth()->user(), 'access_token' => $accessToken]);
+        return response([
+            'message' => 'Login Successful', 
+            'user' => auth()->user(), 
+            'access_token' => $accessToken
+        ]);
     }
 
     public function forgot_password(ForgotPasswordRequest $request)
@@ -68,21 +67,7 @@ class AuthController extends Controller
         $request->validated();
         
         $user = User::where('roll_number', $request->roll_number)->first();
-        if ($user && $user->email === $request->email) {
-            $lastRetry = DB::table('password_resets')->where('email', $request->email)->first();
-            if ($lastRetry) {
-                $timestamp = $lastRetry->created_at;
-                $difference = Carbon::now()->timestamp - strtotime($timestamp);
-                if ($difference < 60 * 60) {
-                    $timeRemaining = 60 - round($difference / 60);
-                    return response()->json([
-                        'message' => 
-                            'No more than 1 reset attempt is allowed per hour. Try again after '
-                            . $timeRemaining . ' minutes'
-                    ], 429);
-                }
-            }
-        } else {
+        if (!($user && $user->email === $request->email)) {
             return response()->json([
                 'message' => 'The given data was invalid.',
                 'errors' => [
@@ -95,16 +80,17 @@ class AuthController extends Controller
         $status = Password::sendResetLink(
             $request->only('email')
         );
-    
-        if ($status === Password::RESET_LINK_SENT) {
+
+        if ($status === Password::RESET_THROTTLED) {
             return response()->json([
-                'message' => 'Password reset email sent successfully. Please check your inbox.'
-            ], 200);
-        } else {
-            return response()->json([
-                'message' => 'Password reset request could not be processed. Try again later.'
-            ], 503);
+                'message' => 'We have sent a reset email to you recently. Please check your inbox.'
+            ], 429);
         }
+    
+        assert($status === Password::RESET_LINK_SENT);
+        return response()->json([
+            'message' => 'Password reset email sent successfully. Please check your inbox.'
+        ], 200);
     }
 
     public function reset_password(ResetPasswordRequest $request)
@@ -124,11 +110,7 @@ class AuthController extends Controller
             }
         );
 
-        if ($status == Password::PASSWORD_RESET) {
-            return response()->json([
-                'message' => 'Your password has been updated!'
-            ], 200);
-        } else if ($status == Password::INVALID_USER) {
+        if ($status == Password::INVALID_USER) {
             return response()->json([
                 'message' => 'The given data was invalid.',
                 'errors' => [
@@ -139,10 +121,11 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Token is invalid.'
             ], 503);
-        } else {
-            return response()->json([
-                'message' => 'Password reset request could not be processed. Try again later.'
-            ], 503);
         }
+
+        assert($status == Password::PASSWORD_RESET);
+        return response()->json([
+            'message' => 'Your password has been updated!'
+        ], 200);
     }
 }

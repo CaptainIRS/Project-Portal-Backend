@@ -176,6 +176,52 @@ class EditProjectsTest extends TestCase
     }
 
     /** @test */
+    public function users_cannot_be_added_more_than_max_member_count()
+    {
+        $data = $this->project->toArray();
+        $data['max_member_count'] = 3;
+        $data['stacks'] = [1, 2];
+        $data['status'] = 1;
+        $data['type'] = 1;
+        $data['deadline'] = null;
+        $data['users'] = [
+            [
+                'id' => $this->developer->id,
+                'role' => 'DEVELOPER'
+            ],
+            [
+                'id' => $this->maintainer->id,
+                'role' => 'MAINTAINER'
+            ],
+            [
+                'id' => $this->users[3]->id,
+                'role' => 'DEVELOPER'
+            ],
+            [
+                'id' => $this->users[4]->id,
+                'role' => 'MAINTAINER'
+            ],
+        ];
+
+        Passport::actingAs($this->maintainer);
+        $this->post(
+            'api/projects/1/edit',
+            $data
+        )->assertStatus(422)
+            ->assertJson([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'max_member_count' => ['Max member count is less than current user count']
+                ]
+            ]);
+
+        $this->assertCount(
+            3,
+            $this->project->users()->get()
+        );
+    }
+
+    /** @test */
     public function users_roles_in_project_can_be_modified()
     {
         $data = $this->project->toArray();
@@ -234,7 +280,7 @@ class EditProjectsTest extends TestCase
             ->assertJson([
                 'message' => 'The given data was invalid.',
                 'errors' => [
-                    'users' => 'Author cannot take any other role'
+                    'users' => ['Author cannot take any other role']
                 ]
             ]);
     }

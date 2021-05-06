@@ -22,16 +22,8 @@ class FeedbackController extends Controller
      * @param  int  $projectId
      * @return \Illuminate\Http\Response
      */
-    public function index(Request $request, $projectId)
+    public function index(Request $request, Project $project)
     {
-        try {
-            $project = Project::findOrFail($projectId);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Project doesn\'t exist!'
-            ], 404);
-        }
-
         $userId = $request->user()->id;
 
         $feedbacksSent = $project->feedbacks()

@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Project;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
 
 class EditProjectRequest extends FormRequest
@@ -13,7 +15,19 @@ class EditProjectRequest extends FormRequest
      */
     public function authorize()
     {
-        return true;
+        return $this->user()->can('update', $this->project);
+    }
+
+    /**
+     * Handle a failed authorization attempt.
+     *
+     * @return void
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
+    protected function failedAuthorization()
+    {
+        throw new AuthorizationException('You are not allowed to edit this project!');
     }
 
     /**
@@ -38,5 +52,31 @@ class EditProjectRequest extends FormRequest
             'stacks' => 'required|array|min:1',
             'stacks.*' => 'exists:stacks,id'
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     *
+     * @param  \Illuminate\Validation\Validator  $validator
+     * @return void
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if (isset($this->users)) {
+                if (count($this->users) + $this->project->users()->wherePivot('role', 'AUTHOR')->count()
+                        > $this->max_member_count) {
+                    $validator->errors()->add(
+                        'max_member_count', 'Max member count is less than current user count'
+                    );
+                }
+                $projectAuthors = $this->project->users()->wherePivot('role', 'AUTHOR')->get();
+                foreach ($this->users as $user) {
+                    if ($projectAuthors->contains($user['id'])) {
+                        $validator->errors()->add('users', 'Author cannot take any other role');
+                    }
+                }
+            }
+        });
     }
 }
