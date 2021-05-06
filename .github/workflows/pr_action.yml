@@ -3,7 +3,7 @@ name: test-and-coverage
 on:
   pull_request:
     branches:
-    - coverage
+    - coverage-test
 
 jobs:
   tests:

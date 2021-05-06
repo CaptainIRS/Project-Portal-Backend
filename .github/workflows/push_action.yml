@@ -3,7 +3,7 @@ name: test-and-coverage
 on: 
   push:
     branches:
-    - coverage
+    - coverage-test
 
 jobs:
   tests:
