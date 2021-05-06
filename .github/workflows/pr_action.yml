@@ -49,10 +49,11 @@ jobs:
       - name: Prepare for staging coverage report
         run: |
           cd coverage
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git checkout gh-pages || git checkout -b gh-pages
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git checkout gh-pages || git checkout --orphan gh-pages
           rm -rf *
+          git rm --cached $(git ls-files)
           cd ..
       - name: Get coverage report
         run: vendor/bin/phpunit --coverage-clover coverage.xml --coverage-html coverage
