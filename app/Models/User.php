@@ -32,7 +32,7 @@ class User extends Authenticatable
 
     public function sendPasswordResetNotification($token)
     {
-        $url = 'https://kitchen.delta.nitt.edu/reset_password?token='.$token;
+        $url = env('FRONTEND_URL') . '/reset_password?token=' . $token;
 
         $this->notify(new ResetPasswordNotification($this->name, $url));
     }

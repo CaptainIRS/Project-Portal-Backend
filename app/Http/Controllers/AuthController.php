@@ -15,6 +15,11 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        if (env('REGISTRATION_ENABLED') === false) {
+            return response()->json([
+                'message' => 'Registration has been disabled. Contact admin.'
+            ], 400);
+        }
 
         $data = $request->validate([
             'name' => 'required|max:255',

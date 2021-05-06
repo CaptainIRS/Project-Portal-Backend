@@ -28,7 +28,7 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerPolicies();
 
         ResetPassword::createUrlUsing(function ($user, string $token) {
-            return 'https://kitchen.delta.nitt.edu/reset_password?token=' . $token;
+            return env('FRONTEND_URL') . '/reset_password?token=' . $token;
         });
 
         Passport::routes();
