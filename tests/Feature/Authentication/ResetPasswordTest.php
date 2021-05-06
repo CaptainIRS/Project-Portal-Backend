@@ -4,20 +4,17 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
-use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
 class ResetPasswordTest extends TestCase
 {
-    private $user;
-    private $anotherUser;
-
     public function setUp(): void
     {
         parent::setUp();
@@ -83,6 +80,47 @@ class ResetPasswordTest extends TestCase
             'email' => $user->email
         ])->assertStatus(422)
         ->assertExactJson($expectedError);
+    }
+
+    /** @test */
+    public function email_contains_only_frontend_url_in_link()
+    {
+        $frontendUrl = env('FRONTEND_URL');
+
+        $user = User::factory()->create();
+        $this->post('api/auth/forgot_password', [
+            'roll_number' => $user->roll_number,
+            'email' => $user->email
+        ])->assertOk();
+
+        Notification::assertSentTo(
+            $user,
+            function(ResetPasswordNotification $notification, $channels) use ($user, $frontendUrl) {
+                $mail = $notification->toMail($user);
+                return Str::contains($mail->actionUrl, $frontendUrl);
+            }
+        );
+    }
+
+    /** @test */
+    public function email_contains_correct_reset_link()
+    {
+        $user = User::factory()->create();
+        $this->post('api/auth/forgot_password', [
+            'roll_number' => $user->roll_number,
+            'email' => $user->email
+        ])->assertOk();
+
+        $hashedToken = DB::table('password_resets')->first()->token;
+
+        Notification::assertSentTo(
+            $user,
+            function(ResetPasswordNotification $notification, $channels) use ($user, $hashedToken) {
+                $mail = $notification->toMail($user);
+                $mailedToken = explode('token=', $mail->actionUrl)[1];
+                return Hash::check($mailedToken, $hashedToken);
+            }
+        );
     }
 
     /** @test */
@@ -188,5 +226,35 @@ class ResetPasswordTest extends TestCase
 
         // Verify nothing has changed
         $this->assertTrue(Hash::check($oldPassword, $user->password));
+    }
+
+    /** @test */
+    public function only_one_reset_attempt_is_allowed_per_hour()
+    {
+        $user = User::factory()->create();
+
+        Carbon::setTestNow(now()->parse('Jan 1, 2021 01:00 am'));
+        $this->post('api/auth/forgot_password', [
+            'roll_number' => $user->roll_number,
+            'email' => $user->email
+        ])->assertOk();
+
+        // Time travel +59 minutes
+        Carbon::setTestNow(now()->parse('Jan 1, 2021 01:59 am'));
+        $this->post('api/auth/forgot_password', [
+            'roll_number' => $user->roll_number,
+            'email' => $user->email
+        ])->assertStatus(429)
+        ->assertJson([
+            'message' => 
+                'We have sent a reset email to you recently. Please check your inbox.'
+        ]);
+
+        // Time travel +61 minutes
+        Carbon::setTestNow(now()->parse('Jan 1, 2021 02:01 am'));
+        $this->post('api/auth/forgot_password', [
+            'roll_number' => $user->roll_number,
+            'email' => $user->email
+        ])->assertOk();
     }
 }

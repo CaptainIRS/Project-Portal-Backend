@@ -15,10 +15,10 @@ Route::get('filter/options/', 'DashboardController@filterOptions')->middleware('
 //project
 Route::prefix('projects')->middleware('auth:api')->group(function () {
     Route::get('all/', 'ProjectController@all');
-    Route::get('{project_id}/', 'ProjectController@show');
+    Route::get('{project}/', 'ProjectController@show');
     Route::post('add/', 'ProjectController@add');
-    Route::post('{project_id}/edit/', 'ProjectController@edit');
-    Route::post('{project_id}/delete/', 'ProjectController@delete');
+    Route::post('{project}/edit/', 'ProjectController@edit');
+    Route::post('{project}/delete/', 'ProjectController@delete');
 });
 
 //stacks
@@ -29,16 +29,16 @@ Route::prefix('stacks')->middleware('auth:api')->group(function () {
 
 //filters
 Route::prefix('projects')->middleware('auth:api')->group(function () {
-    Route::get('filter/user/{user_id}/', 'ProjectController@user_filter');
-    Route::get('filter/stack/{stack_id}/', 'ProjectController@stack_filter');
-    Route::get('filter/type/{type_id}/', 'ProjectController@type_filter');
+    Route::get('filter/user/{user_id}/', 'FilterController@user_filter');
+    Route::get('filter/stack/{stack_id}/', 'FilterController@stack_filter');
+    Route::get('filter/type/{type_id}/', 'FilterController@type_filter');
 });
 
 
 //feedback
 Route::prefix('projects')->middleware('auth:api')->group(function (){
-    Route::get('{project_id}/feedback/get/', 'FeedbackController@index');
-    Route::post('{project_id}/feedback/add/', 'FeedbackController@add');
-    Route::post('{project_id}/feedback/edit/', 'FeedbackController@edit');
-    Route::post('{project_id}/review/', 'FeedbackController@review');
+    Route::get('{project}/feedback/get/', 'FeedbackController@index');
+    Route::post('{project}/feedback/add/', 'FeedbackController@add');
+    Route::post('{project}/feedback/edit/', 'FeedbackController@edit');
+    Route::post('{project}/review/', 'FeedbackController@review');
 });

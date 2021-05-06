@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AddProjectRequest;
+use App\Http\Requests\EditProjectRequest;
+use App\Http\Resources\ProjectResource;
 use Illuminate\Http\Request;
 use App\Models\Project;
-use App\Models\User;
-use App\Models\Stack;
-use App\Models\Type;
+use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
 {
@@ -33,8 +34,7 @@ class ProjectController extends Controller
     /**
      * Show project of specific id.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $projectId
+     * @param  \App\Models\Project  $request
      * @return \Illuminate\Http\Response
      */
     public function show(Request $request, $projectId)
@@ -73,45 +73,21 @@ class ProjectController extends Controller
     /**
      * Store new project.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\AddProjectRequest $request
      * @return \Illuminate\Http\Response
      */
-    public function add(Request $request)
+    public function add(AddProjectRequest $request)
     {
         $user = $request->user();
-        $data = $request->validate([
-            'name' => 'required|max:255',
-            'description' => 'required',
-            'deadline' => 'nullable|date|date_format:Y-m-d H:i:s|after_or_equal:today',
-            'max_member_count' => 'required|integer',
-            'repo_link' => 'required|unique:projects,repo_link|url',
-            'review' => 'nullable',
-            'status' => 'required|exists:statuses,id',
-            'type' => 'required|exists:types,id',
-            'users' => 'nullable|array',
-            'users.*.id' => 'required|exists:users,id',
-            'users.*.role' => 'required|in:AUTHOR,MAINTAINER,DEVELOPER',
-            'stacks' => 'required|array|min:1',
-            'stacks.*' => 'exists:stacks,id'
-        ]);
+        $project = new Project($request->only([
+            'name', 'description', 'deadline', 'review', 'max_member_count', 'repo_link'
+        ]));
 
-        $project = new Project;
-        $project->name = $data['name'];
-        $project->description = $data['description'];
-        if (isset($data['deadline'])) {
-            $project->deadline = $data['deadline'];
-        }
-        if (isset($data['review'])) {
-            $project->review = $data['review'];
-        }
-        $project->max_member_count = $data['max_member_count'];
-        $project->repo_link = $data['repo_link'];
-
-        \DB::transaction(function () use ($project, $user, $data) {
+        DB::transaction(function () use ($project, $user, $request) {
 
             // Associate one-to-one relations
-            $project->type()->associate($data['type']);
-            $project->status()->associate($data['status']);
+            $project->type()->associate($request->type);
+            $project->status()->associate($request->status);
             $project->save();
 
             // Save many-to-many relations
@@ -119,115 +95,45 @@ class ProjectController extends Controller
                 $user->id =>
                 ['role' => 'AUTHOR']
             ]);
-            if (isset($data['users'])) {
-                foreach ($data['users'] as $projectUser) {
+            if (isset($request->users)) {
+                foreach ($request->users as $projectUser) {
                     $project->users()->syncWithoutDetaching([
                         (int) $projectUser['id'] =>
                         ['role' => $projectUser['role']]
                     ]);
                 }
             }
-            $project->stacks()->syncWithoutDetaching($data['stacks']);
+            $project->stacks()->syncWithoutDetaching($request->stacks);
             $project->save();
         });
 
-        if ($project->exists) {
-            return response()->json([
-                'message' => 'Project created successfully!',
-            ], 200);
-        } else {
-            return response()->json([
-                'message' => 'Project could not be created!'
-            ], 503);
-        }
+        assert($project->exists);
+        return response()->json([
+            'message' => 'Project created successfully!',
+        ], 200);
     }
 
     /**
      * Edit the specified project in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\EditProjectRequest  $request
      * @param  int  $projectId
      * @return \Illuminate\Http\Response
      */
-    public function edit(Request $request, $projectId)
+    public function edit(EditProjectRequest $request, Project $project)
     {
-        $user = $request->user();
-        try {
-            $project = Project::findOrFail($projectId);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Project doesn\'t exist!'
-            ], 404);
-        }
+        $project->update($request->only([
+            'name', 'description', 'deadline', 'review', 'max_member_count', 'repo_link'
+        ]));
 
-        if (!$project->users()
-            ->where(function ($query) {
-                $query->where('project_user.role', 'AUTHOR')
-                    ->orWhere('project_user.role', 'MAINTAINER');
-            })->get()
-            ->contains($user->id)) {
-            return response()->json([
-                'message' => 'You are not allowed to edit this project!'
-            ], 403);
-        }
-
-        $data = $request->validate([
-            'name' => 'required|max:255',
-            'description' => 'required|max:5000',
-            'deadline' => 'nullable|date|date_format:Y-m-d H:i:s|after_or_equal:today',
-            'max_member_count' => 'required|integer|min:1|max:100',
-            'repo_link' => 'required|unique:projects,repo_link,' . $projectId,
-            'review' => 'nullable|max:1000',
-            'status' => 'required|exists:statuses,id',
-            'type' => 'required|exists:types,id',
-            'users' => 'nullable|array',
-            'users.*.id' => 'required|exists:users,id',
-            'users.*.role' => 'required|in:MAINTAINER,DEVELOPER',
-            'stacks' => 'required|array|min:1',
-            'stacks.*' => 'exists:stacks,id'
-        ]);
-
-        if (isset($data['users'])) {
-            if (count($data['users']) + $project->users()->wherePivot('role', 'AUTHOR')->count() > $data['max_member_count']) {
-                return response()->json([
-                    'message' => 'The given data was invalid.',
-                    'errors' => [
-                        'max_member_count' => 'Max member count is less than current user count'
-                    ]
-                ], 422);
-            }
-            $projectAuthors = $project->users()->wherePivot('role', 'AUTHOR')->get();
-            foreach ($data['users'] as $user) {
-                if ($projectAuthors->contains($user['id'])) {
-                    return response()->json([
-                        'message' => 'The given data was invalid.',
-                        'errors' => [
-                            'users' => 'Author cannot take any other role'
-                        ]
-                    ], 422);
-                }
-            }
-        }
-
-        $project->name = $data['name'];
-        $project->description = $data['description'];
-        if (isset($data['deadline'])) {
-            $project->deadline = $data['deadline'];
-        }
-        if (isset($data['review'])) {
-            $project->review = $data['review'];
-        }
-        $project->max_member_count = $data['max_member_count'];
-        $project->repo_link = $data['repo_link'];
-
-        \DB::transaction(function () use ($project, $user, $data) {
+        DB::transaction(function () use ($project, $request) {
 
             // Associate one-to-one relations
-            $project->type()->associate($data['type']);
-            $project->status()->associate($data['status']);
+            $project->type()->associate($request->type);
+            $project->status()->associate($request->status);
             $project->save();
 
-            if (isset($data['users'])) {
+            if (isset($request->users)) {
                 $authors = $project->users()->wherePivot('role', 'AUTHOR')->get();
                 $project->users()->sync([]);
                 foreach ($authors as $author) {
@@ -236,7 +142,7 @@ class ProjectController extends Controller
                         ['role' => 'AUTHOR']
                     ]);
                 }
-                foreach ($data['users'] as $projectUser) {
+                foreach ($request->users as $projectUser) {
                     $project->users()->syncWithoutDetaching([
                         $projectUser['id'] =>
                         ['role' => $projectUser['role']]
@@ -244,7 +150,7 @@ class ProjectController extends Controller
                 }
             }
             $project->stacks()->sync([]);
-            $project->stacks()->syncWithoutDetaching($data['stacks']);
+            $project->stacks()->syncWithoutDetaching($request->stacks);
             $project->save();
         });
 
@@ -260,97 +166,31 @@ class ProjectController extends Controller
      * @param  int  $projectId
      * @return \Illuminate\Http\Response
      */
-    public function delete(Request $request, $projectId)
+    public function delete(Project $project)
     {
-        $user = $request->user();
-        try {
-            $project = Project::findOrFail($projectId);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Project doesn\'t exist!'
-            ], 404);
-        }
+        $this->authorize('delete', $project);
 
-        if (!$project->users()
-            ->wherePivot('role', 'AUTHOR')
-            ->get()
-            ->contains($user->id)) {
-            return response()->json([
-                'message' => 'You are not allowed to delete this project!'
-            ], 403);
-        }
+        DB::transaction(function () use ($project) {
 
-        \DB::transaction(function () use ($project, $projectId) {
-
-            $project->users()->each(function ($user) use ($projectId) {
+            $project->users()->each(function ($user) use ($project) {
                 $user->projects()->syncWithoutDetaching([
-                    $projectId =>
-                    ['deleted_at' => \DB::raw('CURRENT_TIMESTAMP')]
+                    $project->id =>
+                    ['deleted_at' => DB::raw('CURRENT_TIMESTAMP')]
                 ]);
             });
-            $project->stacks()->each(function ($stack) use ($projectId) {
+            $project->stacks()->each(function ($stack) use ($project) {
                 $stack->projects()->syncWithoutDetaching([
-                    $projectId =>
-                    ['deleted_at' => \DB::raw('CURRENT_TIMESTAMP')]
+                    $project->id =>
+                    ['deleted_at' => DB::raw('CURRENT_TIMESTAMP')]
                 ]);
             });
 
             $project->delete();
         });
 
-        if ($project->trashed()) {
-            return response()->json([
-                'message' => 'Project deleted successfully!'
-            ], 200);
-        } else {
-            return response()->json([
-                'message' => 'Project could not be deleted!'
-            ], 503);
-        }
-    }
-
-    public function user_filter($user_id)
-    {
-        $filter = User::where('id', $user_id)->with(
-         'projects.stacks',
-         'projects.type',
-         'projects.status')->get('id');
-
+        assert($project->trashed());
         return response()->json([
-            'message' => 'Success!',
-            'data' => [
-                'filtered' => $filter
-            ]
-        ], 200);
-    }
-
-    public function stack_filter($stack_id)
-    {
-        $filter = Stack::where('id', $stack_id)->with(
-         'projects.stacks',
-         'projects.type',
-         'projects.status')->get('id');
-
-        return response()->json([
-            'message' => 'Success!',
-            'data' => [
-                'filtered' => $filter
-            ]
-        ], 200);
-    }
-
-    public function type_filter($type_id)
-    {
-        $filter = Type::where('id', $type_id)->with(
-         'projects.stacks',
-         'projects.type',
-         'projects.status')->get('id');
-
-        return response()->json([
-            'message' => 'Success!',
-            'data' => [
-                'filtered' => $filter
-            ]
+            'message' => 'Project deleted successfully!'
         ], 200);
     }
 }

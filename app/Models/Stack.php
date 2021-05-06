@@ -9,6 +9,7 @@ class Stack extends Model
 {
     use HasFactory;
 
+    protected $fillable = ['name'];
     protected $table = 'stacks';
     protected $hidden = ['pivot'];
     public $timestamps = false;
