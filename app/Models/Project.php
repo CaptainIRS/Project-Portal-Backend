@@ -13,6 +13,9 @@ class Project extends Model
 
     protected $table = 'projects';
     protected $hidden = ['pivot', 'type_id', 'status_id'];
+    protected $fillable = [
+        'name', 'description', 'deadline', 'review', 'max_member_count', 'repo_link'
+    ];
     public $timestamps = true;
 
     public function stacks()

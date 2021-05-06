@@ -80,6 +80,16 @@ class EditFeedbackTest extends TestCase
     }
 
     /** @test */
+    public function feedback_cannot_be_edited_with_invalid_fields()
+    {
+        Passport::actingAs($this->sender);
+        $this->post(
+            'api/projects/1/feedback/edit',
+            []
+        )->assertStatus(422);
+    }
+
+    /** @test */
     public function only_feedback_author_can_edit_feedback()
     {
         Passport::actingAs($this->receiver);
