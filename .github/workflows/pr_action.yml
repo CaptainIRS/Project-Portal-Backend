@@ -1,12 +1,9 @@
 name: test-and-coverage
 
-on: 
-  push:
-    branches:
-    - coverage
+on:
   pull_request:
     branches:
-    - master
+    - coverage
 
 jobs:
   tests:
@@ -16,10 +13,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      - name: Checkout coverage site files
-        uses: actions/checkout@v2
-        with:
-          path: coverage
       - name: Setup PHP, with composer and extensions
         uses: shivammathur/setup-php@v2
         with:
@@ -46,22 +39,7 @@ jobs:
         run: php artisan key:generate
       - name: Run tests
         run: php artisan test
-      - name: Prepare for staging coverage report
-        run: |
-          cd coverage
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git checkout gh-pages || git checkout --orphan gh-pages
-          rm -rf *
-          git rm --cached $(git ls-files)
-          cd ..
       - name: Get coverage report
-        run: vendor/bin/phpunit --coverage-clover coverage.xml --coverage-html coverage
+        run: vendor/bin/phpunit --coverage-clover coverage.xml
       - name: Upload coverage report
         run: bash <(curl -s https://codecov.io/bash)
-      - name: Stage coverage report in GitHub Pages
-        run: |
-          cd coverage
-          git add .
-          git commit -m "Update coverage report"
-          git push origin gh-pages
