@@ -37,7 +37,7 @@ jobs:
         run: |
           php -r "file_exists('.env') || copy('.env.example', '.env');"
           php artisan key:generate
-      - name: Clear Config
+      - name: Clear config
         run: php artisan config:clear
       - name: Prepare for staging coverage report
         run: |
@@ -59,4 +59,4 @@ jobs:
           cd coverage
           git add .
           git commit -m "Update coverage report"
-          git push origin gh-pages
+          git push -f origin gh-pages
