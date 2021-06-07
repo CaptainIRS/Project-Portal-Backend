@@ -32,7 +32,7 @@ class ResetPasswordTest extends TestCase
             ->assertJson([
                 'message' => 'Password reset email sent successfully. Please check your inbox.'
             ]);
-        
+
         // Verify email is sent to user
         Notification::assertSentTo($user, ResetPasswordNotification::class);
     }
@@ -46,7 +46,7 @@ class ResetPasswordTest extends TestCase
             'roll_number' => $user->roll_number,
             'email' => $anotherUser->email
         ])->assertStatus(422);
-        
+
         // Verify nothing is sent to anyone
         Notification::assertNothingSent();
     }
@@ -71,15 +71,17 @@ class ResetPasswordTest extends TestCase
 
         $this->post('api/auth/forgot_password', [
             'roll_number' => $user->roll_number,
-            'email' => $anotherUser->email /** NOTE */
+            'email' => $anotherUser->email
+            /** NOTE */
         ])->assertStatus(422)
-        ->assertExactJson($expectedError);
+            ->assertExactJson($expectedError);
 
         $this->post('api/auth/forgot_password', [
-            'roll_number' => $anotherUser->roll_number, /** NOTE */
+            'roll_number' => $anotherUser->roll_number,
+            /** NOTE */
             'email' => $user->email
         ])->assertStatus(422)
-        ->assertExactJson($expectedError);
+            ->assertExactJson($expectedError);
     }
 
     /** @test */
@@ -95,7 +97,7 @@ class ResetPasswordTest extends TestCase
 
         Notification::assertSentTo(
             $user,
-            function(ResetPasswordNotification $notification, $channels) use ($user, $frontendUrl) {
+            function (ResetPasswordNotification $notification, $channels) use ($user, $frontendUrl) {
                 $mail = $notification->toMail($user);
                 return Str::contains($mail->actionUrl, $frontendUrl);
             }
@@ -115,7 +117,7 @@ class ResetPasswordTest extends TestCase
 
         Notification::assertSentTo(
             $user,
-            function(ResetPasswordNotification $notification, $channels) use ($user, $hashedToken) {
+            function (ResetPasswordNotification $notification, $channels) use ($user, $hashedToken) {
                 $mail = $notification->toMail($user);
                 $mailedToken = explode('token=', $mail->actionUrl)[1];
                 return Hash::check($mailedToken, $hashedToken);
@@ -126,12 +128,6 @@ class ResetPasswordTest extends TestCase
     /** @test */
     public function requests_should_die_if_user_is_already_logged_in()
     {
-        $this->markTestSkipped(
-            'This doesn\'t happen currently. In theory, frontend should '.
-            'not run into this case, but anyways for safety purposes, this can be done '.
-            'in the future'
-        );
-
         $user = User::factory()->create();
 
         Passport::actingAs($user);
@@ -139,7 +135,7 @@ class ResetPasswordTest extends TestCase
         $this->post('api/auth/forgot_password', [
             'roll_number' => $user->roll_number,
             'email' => $user->email
-        ])->assertStatus(404);
+        ])->assertStatus(302);
     }
 
     /** @test */
@@ -183,13 +179,14 @@ class ResetPasswordTest extends TestCase
             'token' => $token
         ])->post('api/auth/reset_password', [
             'token' => $token,
-            'email' => $anotherUser->email, /** NOTE */
+            'email' => $anotherUser->email,
+            /** NOTE */
             'password' => $newPassword,
             'password_confirmation' => $newPassword
         ])->assertStatus(503)
-        ->assertJson([
-            'message' => 'Token is invalid.'
-        ]);
+            ->assertJson([
+                'message' => 'Token is invalid.'
+            ]);
 
         $user->refresh();
 
@@ -211,16 +208,17 @@ class ResetPasswordTest extends TestCase
             'token' => $token
         ])->post('api/auth/reset_password', [
             'token' => $token,
-            'email' => 'hello@hello.com', /** NOTE */
+            'email' => 'hello@hello.com',
+            /** NOTE */
             'password' => $newPassword,
             'password_confirmation' => $newPassword
         ])->assertStatus(422)
-        ->assertJson([
-            'message' => 'The given data was invalid.',
-            'errors' => [
-                'email' => ['The entered email is incorrect.']
-            ]
-        ]);
+            ->assertJson([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'email' => ['The entered email is incorrect.']
+                ]
+            ]);
 
         $user->refresh();
 
@@ -245,10 +243,10 @@ class ResetPasswordTest extends TestCase
             'roll_number' => $user->roll_number,
             'email' => $user->email
         ])->assertStatus(429)
-        ->assertJson([
-            'message' => 
+            ->assertJson([
+                'message' =>
                 'We have sent a reset email to you recently. Please check your inbox.'
-        ]);
+            ]);
 
         // Time travel +61 minutes
         Carbon::setTestNow(now()->parse('Jan 1, 2021 02:01 am'));
