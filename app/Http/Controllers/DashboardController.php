@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 class DashboardController extends Controller
 {
     /**
-     * Show all details, projects and feedbacks of specific user
+     * Show all details and projects of specific user
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
@@ -18,13 +18,9 @@ class DashboardController extends Controller
     public function show(Request $request)
     {
         $user = $request->user();
-        $user['projects'] = $user->projects()->whereHas('status', function($query) {
-            $query->where('name' , 'ONGOING');
+        $user['projects'] = $user->projects()->whereHas('status', function ($query) {
+            $query->where('name', 'ONGOING');
         })->with([
-            'feedbacks' => function ($feedback) use ($user) {
-                $feedback->where('sender_id', $user)
-                    ->orWhere('receiver_id', $user);
-            },
             'stacks',
             'status',
             'users',
@@ -34,16 +30,16 @@ class DashboardController extends Controller
             "message" => "Success!",
             "data" => [
                 'user' => $user,
-                'open_projects' => Project::whereHas('status', function($query) {
+                'open_projects' => Project::whereHas('status', function ($query) {
                     $query->where('name', 'ONGOING');
                 })->withCount('users')
-                ->with([
-                    'stacks',
-                    'status',
-                    'type'
-                ])->get()->filter(function ($project) {
-                    return $project->users_count < $project->max_member_count;
-                })
+                    ->with([
+                        'stacks',
+                        'status',
+                        'type'
+                    ])->get()->filter(function ($project) {
+                        return $project->users_count < $project->max_member_count;
+                    })
             ]
         ], 200);
     }

@@ -5,7 +5,6 @@
 - Add developers and maintainers to a project
 - Filter based on project type, stack and members
 - Give general comments on a project as a review
-- Give private feedback to fellow developers on a project
 - Dashboard showing user projects and open projects
 
 ## Setup

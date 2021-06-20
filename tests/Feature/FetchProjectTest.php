@@ -6,7 +6,6 @@ use Tests\TestCase;
 
 use App\Models\Project;
 use App\Models\User;
-use App\Models\Feedback;
 use Laravel\Passport\Passport;
 
 class FetchProjectTest extends TestCase
@@ -76,7 +75,6 @@ class FetchProjectTest extends TestCase
                 'data' => [
                     'project' => [
                         '*' =>  [
-                            'feedbacks',
                             'stacks',
                             'status',
                             'users',
@@ -85,46 +83,5 @@ class FetchProjectTest extends TestCase
                     ]
                 ]
             ]);
-    }
-
-    /** @test */
-    public function feedbacks_of_logged_in_user_are_fetched_with_project()
-    {
-        $this->project->feedbacks()->saveMany(
-            Feedback::factory()->count(3)->create([
-                'sender_id' => $this->developer,
-                'receiver_id' => $this->maintainer,
-                'project_id' => $this->project
-            ])
-        );
-        $this->project->feedbacks()->saveMany(
-            Feedback::factory()->count(2)->create([
-                'sender_id' => $this->author,
-                'receiver_id' => $this->maintainer,
-                'project_id' => $this->project->id
-            ])
-        );
-
-        Passport::actingAs($this->developer);
-        $this->get('api/projects/1')
-            ->assertStatus(200)
-            ->assertJsonCount(
-                3,
-                'data.project.0.feedbacks.*'
-            );
-        Passport::actingAs($this->maintainer);
-        $this->get('api/projects/1')
-            ->assertStatus(200)
-            ->assertJsonCount(
-                5,
-                'data.project.0.feedbacks.*'
-            );
-        Passport::actingAs($this->author);
-        $this->get('api/projects/1')
-            ->assertStatus(200)
-            ->assertJsonCount(
-                2,
-                'data.project.0.feedbacks.*'
-            );
     }
 }

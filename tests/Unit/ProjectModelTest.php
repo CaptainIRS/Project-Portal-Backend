@@ -6,7 +6,6 @@ use Tests\TestCase;
 
 use App\Models\Project;
 use App\Models\User;
-use App\Models\Feedback;
 
 class ProjectModelTest extends TestCase
 {
@@ -73,25 +72,5 @@ class ProjectModelTest extends TestCase
             ['role' => 'DEVELOPER']
         ]);
         $this->assertCount(2, $this->project->users()->get());
-    }
-
-    /** @test */
-    public function feedbacks_can_be_added_to_projects()
-    {
-
-        $this->project->users()->syncWithoutDetaching([
-            $this->users[2]->id =>
-            ['role' => 'DEVELOPER'],
-            $this->users[3]->id =>
-            ['role' => 'DEVELOPER']
-        ]);
-        $this->project->feedbacks()->saveMany(
-            Feedback::factory()->count(3)->create([
-                'project_id' => $this->project->id,
-                'sender_id' => $this->users[2]->id,
-                'receiver_id' => $this->users[3]->id
-            ])
-        );
-        $this->assertCount(3, $this->project->feedbacks()->get());
     }
 }

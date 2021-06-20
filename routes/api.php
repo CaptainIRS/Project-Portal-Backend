@@ -33,12 +33,3 @@ Route::prefix('projects')->middleware('auth:api')->group(function () {
     Route::get('filter/stack/{stack_id}/', 'ProjectController@stack_filter');
     Route::get('filter/type/{type_id}/', 'ProjectController@type_filter');
 });
-
-
-//feedback
-Route::prefix('projects')->middleware('auth:api')->group(function (){
-    Route::get('{project_id}/feedback/get/', 'FeedbackController@index');
-    Route::post('{project_id}/feedback/add/', 'FeedbackController@add');
-    Route::post('{project_id}/feedback/edit/', 'FeedbackController@edit');
-    Route::post('{project_id}/review/', 'FeedbackController@review');
-});

@@ -52,10 +52,6 @@ class ProjectController extends Controller
             'message' => 'Success!',
             'data' => [
                 'project' => Project::where('id', $projectId)->with([
-                    'feedbacks' => function ($feedback) use ($userId) {
-                        $feedback->where('sender_id', $userId)
-                            ->orWhere('receiver_id', $userId);
-                    },
                     'stacks',
                     'status',
                     'type'

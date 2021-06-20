@@ -18,17 +18,12 @@ class Project extends Model
     public function stacks()
     {
         return $this->belongsToMany('App\Models\Stack')
-                    ->whereNull('project_stack.deleted_at');
+            ->whereNull('project_stack.deleted_at');
     }
 
     public function status()
     {
         return $this->belongsTo('App\Models\Status');
-    }
-
-    public function feedbacks()
-    {
-        return $this->hasMany('App\Models\Feedback');
     }
 
     public function type()
@@ -39,8 +34,7 @@ class Project extends Model
     public function users()
     {
         return $this->belongsToMany('App\Models\User')
-                    ->withPivot('role')
-                    ->whereNull('project_user.deleted_at');
+            ->withPivot('role')
+            ->whereNull('project_user.deleted_at');
     }
-
 }
